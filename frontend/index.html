@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awesome Calculator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font for a clean, modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevents scrollbars from appearing due to canvas animation */
+        }
+        /* Position the canvas to cover the entire background */
+        #interactive-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        /* The main content container needs to be on top of the canvas */
+        .landing-container {
+            position: relative;
+            z-index: 1;
+        }
+        @keyframes fade-in-down {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-down {
+            animation: fade-in-down 0.8s ease-out forwards;
+        }
+        .animate-fade-in {
+            animation: fade-in 0.8s ease-out 0.4s forwards;
+            opacity: 0; /* Initial state */
+        }
+        .animate-fade-in-up {
+            animation: fade-in-up 0.8s ease-out 0.8s forwards;
+            opacity: 0; /* Initial state */
+        }
+    </style>
+</head>
+<body class="bg-gray-950 flex justify-center items-center h-screen">
+
+    <!-- The canvas for the interactive particle background -->
+    <canvas id="interactive-canvas"></canvas>
+
+    <!-- The original landing page content -->
+    <div class="landing-container bg-white bg-opacity-20 backdrop-filter backdrop-blur-md p-12 rounded-3xl shadow-xl border border-white border-opacity-30 text-center text-white">
+        <h1 class="text-5xl font-bold mb-4 animate-fade-in-down">Welcome to My Awesome Calculator!</h1>
+        <p class="text-xl mb-8 animate-fade-in">A beautifully designed tool for all your mathematical needs.</p>
+        <a href="calculator.html" class="cta-button bg-white text-indigo-600 font-bold py-4 px-8 rounded-full shadow-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 animate-fade-in-up">
+            Try It Now!
+        </a>
+    </div>
+
+   <script>
+    // --- Animated Background Canvas Logic ---
+    const canvas = document.getElementById('interactive-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    let mouse = { x: null, y: null, radius: 100 };
+    // Array of mathematical symbols to use in the background
+    const mathSymbols = ['+', '-', '×', '÷', '=', '√', '∫', '∑', 'π', '∞'];
+
+    // Handle canvas resizing to fill the viewport
+    function resizeCanvas() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Update mouse coordinates for interaction
+    window.addEventListener('mousemove', (event) => {
+        mouse.x = event.x;
+        mouse.y = event.y;
+    });
+
+    // The Particle class defines the properties and behavior of each moving dot
+    class Particle {
+        constructor(x, y) {
+            this.x = x || Math.random() * width;
+            this.y = y || Math.random() * height;
+            this.size = Math.random() * 100 + 8; // Random size for a varied look
+            this.speedX = Math.random() * 1 - 0.5; // Random horizontal speed
+            this.speedY = Math.random() * 1 - 0.5; // Random vertical speed
+            this.symbol = mathSymbols[Math.floor(Math.random() * mathSymbols.length)];
+            this.opacity = Math.random();
+        }
+        
+        // Method to draw the particle on the canvas
+        draw() {
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+            ctx.font = `${this.size}px Inter`;
+            ctx.fillText(this.symbol, this.x, this.y);
+        }
+        
+        // Method to update the particle's position and handle mouse interaction
+        update() {
+            // Bounce off the canvas edges
+            if (this.x + this.size > width || this.x - this.size < 0) {
+                this.speedX = -this.speedX;
+            }
+            if (this.y + this.size > height || this.y - this.size < 0) {
+                this.speedY = -this.speedY;
+            }
+            
+            this.x += this.speedX;
+            this.y += this.speedY;
+            
+            // Mouse interaction: repel particles within a certain radius
+            if (mouse.x !== null) {
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < mouse.radius) {
+                    const angle = Math.atan2(dy, dx);
+                    const force = mouse.radius / distance;
+                    this.x -= Math.cos(angle) * force * 0.5;
+                    this.y -= Math.sin(angle) * force * 0.5;
+                }
+            }
+        }
+    }
+
+    // Initialize the array of particles
+    function init() {
+        particles = [];
+        let numberOfParticles = (width * height) / 10000;
+        for (let i = 0; i < numberOfParticles; i++) {
+            particles.push(new Particle());
+        }
+    }
+
+    // The main animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        ctx.clearRect(0, 0, width, height);
+
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+        }
+    }
+
+    // Start the application
+    window.onload = function () {
+        init();
+        animate();
+    };
+</script>
+</body>
+</html>
